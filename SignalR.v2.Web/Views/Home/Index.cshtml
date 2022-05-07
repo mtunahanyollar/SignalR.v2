@@ -3,25 +3,51 @@
 }
 
 @section Scripts
-{ 
+{
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
     <script type="text/javascript">
         $(document).ready(() => {
-            var connection = new signalR.HubConnectionBuilder().withUrl("https://localhost:44343/MyHub").build()
+            //Log Levels. Trace - Debug - Information - Warning - Error - Critical//
+            //var connection = new signalR.HubConnectionBuilder().configureLogging(signalR.LogLevel.Information).withAutomaticReconnect().withUrl("https://localhost:5001/MyHub").build() //Console: 5001 IIS: 44343
+            var connection = new signalR.HubConnectionBuilder().withAutomaticReconnect().withUrl("https://localhost:5001/MyHub").build() //Console: 5001 IIS: 44343
 
+            //Connections
             $("#conStatus").text(connection.connectionState);
 
             connection.start().then(() => {
                 $("#conStatus").text(connection.connectionState);
+                $('#loading').hide();
             }).catch((err) => { console.log(err) });
 
+            //ONRECONNECTION
+            connection.onreconnecting(err => {
+                $('#loading').show();
+                $('#conStatus').text(connection.connectionState);
+                console.log('onreconnection: ' + err);
+            });
+
+            //ONRECONNECTED
+            connection.onreconnected(connectionId => {
+                $('#loading').hide();
+                $('#conStatus').text(connection.connectionState);
+                console.log('connectionId: ' + connectionId)
+            });
+
+            connection.onclose(() => {
+                $('#loading').hide();
+                $('#conStatus').text(connection.connectionState);
+            })
+
+
+            //Clicks
             $("#btnSaveName").click(() => {
-                connection.invoke("SendName", $("txtName").val()).catch((err) =>
+                connection.invoke("SendName", $("#txtName").val()).catch((err) =>
                     console.log(err))
             })
 
             //method subscription x1
             connection.on("ReceiveName", (name) => {
+                $("#namesList").append(`<li class="list-group-item"> ${name}</li>`)
                 console.log(name)
             })
         })
@@ -29,11 +55,24 @@
 }
 <div class="row">
     <div class="col-md-8 offset-2">
-        <input class="form-control" type="text" id="txtName"/>
+        <input class="form-control" type="text" id="txtName" />
+        
         <hr />
         <button class="btn btn-primary" id="btnSaveName">Save Name</button>
+
         <div class="alert alert-info">
-            Connection Status: <strong id="conStatus"></strong>
+            <div class="float-left">
+                Connection Status: <strong id="conStatus"></strong>
+            </div>
+            <div class="float-right">
+                <div id="loading" class="spinner-border" role="status">
+                    <span class="sr-only">Loading..</span>
+                </div>
+            </div>
         </div>
+    </div>
+
+    <div class="col-md-8 offset-2">
+        <ul class="list-group" id="namesList"></ul>
     </div>
 </div>
